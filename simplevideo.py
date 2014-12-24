@@ -15,7 +15,7 @@ class SimpleVideoBlock(XBlock):
     href = String(help="URL of the video page at the provider", default=None, scope=Scope.content)
     maxwidth = Integer(help="Maximum width of the video", default=800, scope=Scope.content)
     maxheight = Integer(help="Maximum height of the video", default=450, scope=Scope.content)    
-
+    watched = Integer(help="How many times the student has watched it?", default=0, scope=Scope.user_state) # user watch times
     def student_view(self, context):
         """
         Create a fragment used to display the XBlock to a student.
@@ -29,6 +29,17 @@ class SimpleVideoBlock(XBlock):
         # Load the HTML fragment from within the package and fill in the template
         html_str = pkg_resources.resource_string(__name__, "static/html/simplevideo.html")
         frag = Fragment(unicode(html_str).format(self=self, embed_code=embed_code))
+        
+        css_str = pkg_resources.resource_string(__name__, "static/css/simplevideo.css")
+        frag.add_css(unicode(css_str))
+
+        # Load JS
+        if provider == 'vimeo.com':
+            js_str = pkg_resources.resource_string(__name__, "static/js/lib/froogaloop.min.js")
+            frag.add_javascript(unicode(js_str))
+            js_str = pkg_resources.resource_string(__name__, "static/js/src/simplevideo.js")
+            frag.add_javascript(unicode(js_str))
+            frag.initialize_js('SimpleVideoBlock')
 
         return frag
 
@@ -71,3 +82,16 @@ class SimpleVideoBlock(XBlock):
             </vertical_demo>
             """)
         ]
+
+    @XBlock.json_handler
+    def mark_as_watched(self, data, suffix=''):
+        """
+        Called upon completion of the video.
+        called by js event
+        """
+        if not data.get('watched'):
+            log.warn('not watched yet')
+        else:
+            self.watched += 1
+
+        return {'watched': self.watched}
